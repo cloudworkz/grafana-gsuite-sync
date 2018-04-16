@@ -1,7 +1,6 @@
 # grafana-gsuite-sync
 [![license](https://img.shields.io/github/license/google-cloud-tools/grafana-gsuite-sync.svg?maxAge=604800)](https://github.com/google-cloud-tools/grafana-gsuite-sync)
 [![Docker Repository on Quay](https://quay.io/repository/google-cloud-tools/grafana-gsuite-sync/status "Docker Repository on Quay")](https://quay.io/repository/google-cloud-tools/grafana-gsuite-sync)
-[![Docker Pulls](https://img.shields.io/docker/pulls/google-cloud-tools/grafana-gsuite-sync.svg?maxAge=604800)](https://hub.docker.com/r/google-cloud-tools/grafana-gsuite-sync)
 
 ### What It Does
 
@@ -16,6 +15,8 @@ Grafana GSuite Synchroniser pulls a Google Group, extracts Google Group Member E
 ### Usage
 
 ```
+docker run -it quay.io/google-cloud-tools/grafana-gsuite-sync
+
   Usage: grafana-gsuite-sync [options]
 
   Options:
@@ -32,5 +33,6 @@ Grafana GSuite Synchroniser pulls a Google Group, extracts Google Group Member E
     -l, --level [level]                            Log level
     -m, --mode [mode]                              How users are sychronized between google and grafana: sync or upsert-only
     -e, --exclude [exclude]                        Exclude roles to delete
+    -i, --interval [interval]                      Sync interval
     -h, --help                                     output usage information
 ```

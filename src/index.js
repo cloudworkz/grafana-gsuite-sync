@@ -28,6 +28,7 @@ commander
     .option("-l, --level [level]", "Log level", /^(debug|info|warn|error|fatal)$/i)
     .option("-m, --mode [mode]", "How users are sychronized between google and grafana: sync or upsert-only", /^(sync|upsert-only)$/i)
     .option("-e, --exclude [exclude]", "Exclude roles to delete", /^(Admin|Editor|Viewer)$/i)
+    .option("-i, --interval [interval]", "Sync interval")
     .parse(process.argv);
 
 const readFileAsync = promisify(readFile);
@@ -51,7 +52,7 @@ const rules = process.env.SYNC_RULES || commander.rules || [];
 const mode = process.env.MODE || commander.mode || "sync";
 const exclude = process.env.EXCLUDE || commander.exclude || "";
 
-const interval = process.env.INTERVAL || 5000 || (24 * 60 * 60 * 1000).toString();
+const interval = process.env.INTERVAL || commander.interval || 24 * 60 * 60 * 1000;
 const metricsInterval = collectDefaultMetrics();
 const success = new Counter({
     help: "Successful grafana gsuite sync counter",
