@@ -1,0 +1,54 @@
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: grafana-gsuite-sync
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: grafana-gsuite-sync
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '5000'
+        prometheus.io/path: '/metrics'
+      labels:
+        app: grafana-gsuite-sync
+    spec:
+      containers:
+      - name: grafana-gsuite-sync
+        image: quay.io/google-cloud-tools/grafana-gsuite-sync
+        imagePullPolicy: Always
+        args:
+        - '--interval=86400000'
+        - '--rules=test@example.com:Main:Editor'
+        - '--mode=sync'
+        - '--exclude=Admin'
+        - '--grafana-protocol=http'
+        - '--grafana-host=play.grafana.org'
+        - '--grafana-username=admin'
+        - '--grafana-password=admin'
+        # - '--google-admin-email=admin@example.com'
+        # - '--google-credentials=/secrets/credentials.json'
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+        resources:
+            requests:
+                cpu: 0
+                memory: 100Mi
+            limits:
+                cpu: 0.2
+                memory: 500Mi
+      #   volumeMounts:
+      #     - name: google-admin-api-credentials
+      #       mountPath: /secrets
+      #       readOnly: true
+      # volumes:
+      #   - name: google-admin-api-credentials
+      #     secret:
+      #       secretName: google-admin-api-credentials
+      #       items:
+      #         - key: credentials.json
+      #           path: credentials.json
