@@ -10,5 +10,28 @@ Grafana GSuite Synchroniser pulls a Google Group, extracts Google Group Member E
 
 ### Requirements
 
-- The service account's private key file: **-config-file-path** flag
-- The email of the user with permissions to access the Admin APIs:  **-google-admin-email** flag
+- The service account's private key file: **--google-credentials** flag
+- The email of the user with permissions to access the Admin APIs:  **--google-admin-email** flag
+- The grafana admin password:  **--grafana-password** flag
+
+### Usage
+
+```
+  Usage: grafana-gsuite-sync [options]
+
+  Options:
+
+    -p, --port [port]                              Server port
+    -P, --grafana-protocol [grafana-protocol]      Grafana API protocol
+    -H, --grafana-host [grafana-host]              Grafana API host
+    -U, --grafana-username [grafana-username]      Grafana API admin username (default: )
+    -P, --grafana-password <grafana-password>      Grafana API admin password (default: )
+    -C, --google-credentials <google-credentials>  Path to google admin directory credentials file (default: )
+    -A, --google-admin-email <google-admin-email>  The Google Admin Email for subject (default: )
+    -r, --rules <rules>                            Comma separated rules to sync <google group email>:<grafana org name>:<users role>
+        (e.g. test@test.com:Main:Admin)
+    -l, --level [level]                            Log level
+    -m, --mode [mode]                              How users are sychronized between google and grafana: sync or upsert-only
+    -e, --exclude [exclude]                        Exclude roles to delete
+    -h, --help                                     output usage information
+```
