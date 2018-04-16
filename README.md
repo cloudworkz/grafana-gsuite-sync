@@ -15,7 +15,7 @@ Grafana GSuite Synchroniser pulls a Google Group, extracts Google Group Member E
 ### Usage
 
 ```
-docker run -it quay.io/google-cloud-tools/grafana-gsuite-sync
+docker run -it quay.io/google-cloud-tools/grafana-gsuite-sync -h
 
   Usage: grafana-gsuite-sync [options]
 

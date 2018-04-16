@@ -63,91 +63,6 @@ const fail = new Counter({
     name: "grafana_gsuite_sync_fail",
 });
 
-let updateRunning = false;
-
-const updateInterval = setInterval(async () => {
-    try {
-        if (updateRunning){
-            logger.debug("Update is already running. Skipping...");
-            return;
-        }
-        logger.info("Start sync process");
-        updateRunning = true;
-        const grafanaMembers = {}; // { orgId: ["email1","email2"]}
-        const googleMembers = {}; // { orgId: ["email1","email2"]}
-        await Promise.all(rules.map(async (rule) => {
-            try {
-                const groupEmail = rule.split(":")[0];
-                const orgName = rule.split(":")[1];
-                const role = rule.split(":")[2];
-                if (!groupEmail || !orgName || !role) {
-                    throw new Error("Email or organization name or role missing.");
-                }
-                
-                const orgId = await getGrafanaOrgId(orgName);
-                if(!orgId){
-                    throw new Error("Could not get grafana organisation");
-                }
-                const uniqueId = `${orgId}:${role}`;
-                grafanaMembers[uniqueId] = (grafanaMembers[uniqueId] || []).concat(await getGrafanaOrgUsers(orgId));
-
-                await getGoogleApiClient();
-                googleMembers[uniqueId] = (googleMembers[uniqueId] || []).concat(await getGroupMembers(groupEmail));
-
-                success.inc();
-
-            } catch (e) {
-                fail.inc();
-                logger.error(e);
-            }
-        }));
-        await Promise.all(Object.keys(googleMembers).map(async (uniqueId) => {
-            const emails = googleMembers[uniqueId];
-            const orgId = uniqueId.split(":")[0];
-            const role = uniqueId.split(":")[1];
-            await Promise.all(emails.map(async (email) => {
-                try {
-                    const userId = await getGrafanaUserId(email);
-                    if (userId) {
-                        if (!grafanaMembers[uniqueId].includes(email)) {
-                            await createGrafanaUser(orgId, email, role);
-                        } else {
-                            await updateGrafanaUser(orgId, userId, role);
-                        }
-                    }
-                } catch (e) {
-                    logger.error(e);
-                }
-                finally{
-                    logger.debug(`Remove user ${email} from sync map.`);
-                    grafanaMembers[uniqueId] = grafanaMembers[uniqueId].filter(e => e !== email);
-                }
-            }));
-        }));
-        if (mode === "sync"){
-            await Promise.all(Object.keys(grafanaMembers).map(async (uniqueId) => {
-                const emails = grafanaMembers[uniqueId];
-                const orgId = uniqueId.split(":")[0];
-                await Promise.all(emails.map(async (email) => {
-                    const userId = await getGrafanaUserId(email);
-                    if (userId) {
-                        const userRole = await getGrafanaUserRole(userId, orgId);
-                        if (exclude !== userRole) {
-                            await deleteGrafanaUser(orgId, userId);
-                        }
-                    }
-                }));
-            }));
-        }
-        logger.info("End sync process");
-        updateRunning = false;
-    } catch (e) {
-        fail.inc();
-        logger.error(e);
-        updateRunning = false;
-    }
-}, parseInt(interval, 10));
-
 const getGoogleApiClient = async () => {
     if (this.service && this.client) {
         return;
@@ -344,6 +259,91 @@ const deleteGrafanaUser = async (orgId, userId) => {
     }
 };
 
+let updateRunning = false;
+
+const sync = async () => {
+    try {
+        if (updateRunning) {
+            logger.debug("Update is already running. Skipping...");
+            return;
+        }
+        logger.info("Start sync process");
+        updateRunning = true;
+        const grafanaMembers = {}; // { orgId: ["email1","email2"]}
+        const googleMembers = {}; // { orgId: ["email1","email2"]}
+        await Promise.all(rules.map(async (rule) => {
+            try {
+                const groupEmail = rule.split(":")[0];
+                const orgName = rule.split(":")[1];
+                const role = rule.split(":")[2];
+                if (!groupEmail || !orgName || !role) {
+                    throw new Error("Email or organization name or role missing.");
+                }
+
+                const orgId = await getGrafanaOrgId(orgName);
+                if (!orgId) {
+                    throw new Error("Could not get grafana organisation");
+                }
+                const uniqueId = `${orgId}:${role}`;
+                grafanaMembers[uniqueId] = (grafanaMembers[uniqueId] || []).concat(await getGrafanaOrgUsers(orgId));
+
+                await getGoogleApiClient();
+                googleMembers[uniqueId] = (googleMembers[uniqueId] || []).concat(await getGroupMembers(groupEmail));
+
+                success.inc();
+
+            } catch (e) {
+                fail.inc();
+                logger.error(e);
+            }
+        }));
+        await Promise.all(Object.keys(googleMembers).map(async (uniqueId) => {
+            const emails = googleMembers[uniqueId];
+            const orgId = uniqueId.split(":")[0];
+            const role = uniqueId.split(":")[1];
+            await Promise.all(emails.map(async (email) => {
+                try {
+                    const userId = await getGrafanaUserId(email);
+                    if (userId) {
+                        if (!grafanaMembers[uniqueId].includes(email)) {
+                            await createGrafanaUser(orgId, email, role);
+                        } else {
+                            await updateGrafanaUser(orgId, userId, role);
+                        }
+                    }
+                } catch (e) {
+                    logger.error(e);
+                }
+                finally {
+                    logger.debug(`Remove user ${email} from sync map.`);
+                    grafanaMembers[uniqueId] = grafanaMembers[uniqueId].filter(e => e !== email);
+                }
+            }));
+        }));
+        if (mode === "sync") {
+            await Promise.all(Object.keys(grafanaMembers).map(async (uniqueId) => {
+                const emails = grafanaMembers[uniqueId];
+                const orgId = uniqueId.split(":")[0];
+                await Promise.all(emails.map(async (email) => {
+                    const userId = await getGrafanaUserId(email);
+                    if (userId) {
+                        const userRole = await getGrafanaUserRole(userId, orgId);
+                        if (exclude !== userRole) {
+                            await deleteGrafanaUser(orgId, userId);
+                        }
+                    }
+                }));
+            }));
+        }
+        logger.info("End sync process");
+        updateRunning = false;
+    } catch (e) {
+        fail.inc();
+        logger.error(e);
+        updateRunning = false;
+    }
+};
+
 app.get("/healthz", (req, res) => {
     res.status(200).json({ status: "UP" });
 });
@@ -359,7 +359,10 @@ app.get("/metrics", async (req, res) => {
 
 const server = app.listen(port, () => {
     logger.info(`Server listening on port ${port}!`);
+    sync();
 });
+
+const updateInterval = setInterval(sync, parseInt(interval, 10));
 
 process.on("SIGTERM", () => {
     clearInterval(updateInterval);
