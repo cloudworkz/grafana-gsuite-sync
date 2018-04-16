@@ -100,7 +100,16 @@ const getGroupMembers = async (email) => {
     if (response.status !== 200 || !response.data || !response.data.members) {
         throw new Error("Failed to get members list.");
     }
-    return response.data.members.filter(m => m.email).map(m => m.email);
+    let members = [];
+    await Promise.all(response.data.members.filter(m => m.email).map(async (member) => {
+        if (member.type === "GROUP"){
+            const subMembers = await getGroupMembers(member.email);
+            members = members.concat(subMembers);
+        } else {
+            members.push(member.email);
+        }
+    }));
+    return members;
 };
 
 const getGrafanaOrgId = async (name) => {
