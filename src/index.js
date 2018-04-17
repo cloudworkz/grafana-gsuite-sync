@@ -357,9 +357,9 @@ const sync = async () => {
             try {
                 const userId = await getGrafanaUserId(userEmail);
                 if (userId) {
-                    if (grafanaMembers[uniqueId] && !grafanaMembers[uniqueId].includes(userEmail)) {
+                    try {
                         await createGrafanaUser(orgId, userEmail, role);
-                    } else {
+                    }catch(e){
                         await updateGrafanaUser(orgId, userId, role);
                     }
                 }
