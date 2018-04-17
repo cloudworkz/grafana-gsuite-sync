@@ -22,8 +22,9 @@ spec:
         args:
         - '--interval=86400000'
         - '--rules=test@example.com:Main:Editor'
+        - '--static-rules=user@example.com:Main:Viewer'
         - '--mode=sync'
-        - '--exclude=Admin'
+        - '--exclude-role=Admin'
         - '--grafana-protocol=http'
         - '--grafana-host=play.grafana.org'
         - '--grafana-username=admin'

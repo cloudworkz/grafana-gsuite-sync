@@ -29,10 +29,12 @@ docker run -it quay.io/google-cloud-tools/grafana-gsuite-sync -h
     -C, --google-credentials <google-credentials>  Path to google admin directory credentials file (default: )
     -A, --google-admin-email <google-admin-email>  The Google Admin Email for subject (default: )
     -r, --rules <rules>                            Comma separated rules to sync <google group email>:<grafana org name>:<users role>
-        (e.g. test@test.com:Main:Admin)
+        (e.g. 'group@test.com:Main:Admin')
+    -s, --static-rules <static-rules>              Comma separated static rules to create <email>:<grafana org name>:<user role>
+        (e.g. 'user@test.com:Main:Viewer')
     -l, --level [level]                            Log level
     -m, --mode [mode]                              How users are sychronized between google and grafana: sync or upsert-only
-    -e, --exclude [exclude]                        Exclude roles to delete
+    -e, --exclude-role [exclude-role]              Exclude role to delete
     -i, --interval [interval]                      Sync interval
     -h, --help                                     output usage information
 ```

@@ -22,12 +22,18 @@ commander
     .option(
         "-r, --rules <rules>",
         "Comma separated rules to sync <google group email>:<grafana org name>:<users role> \n\t" +
-        "(e.g. test@test.com:Main:Admin)",
+        "(e.g. 'group@test.com:Main:Admin')",
+        (val) => val.split(",")
+    )
+    .option(
+        "-s, --static-rules <static-rules>",
+        "Comma separated static rules to create <email>:<grafana org name>:<user role> \n\t" +
+        "(e.g. 'user@test.com:Main:Viewer')",
         (val) => val.split(",")
     )
     .option("-l, --level [level]", "Log level", /^(debug|info|warn|error|fatal)$/i)
     .option("-m, --mode [mode]", "How users are sychronized between google and grafana: sync or upsert-only", /^(sync|upsert-only)$/i)
-    .option("-e, --exclude [exclude]", "Exclude roles to delete", /^(Admin|Editor|Viewer)$/i)
+    .option("-e, --exclude-role [exclude-role]", "Exclude role to delete", /^(Admin|Editor|Viewer)$/i)
     .option("-i, --interval [interval]", "Sync interval")
     .parse(process.argv);
 
@@ -48,9 +54,10 @@ const grafanaUri = `${grafanaProtocol}://${grafanaUsername}:${grafanaPassword}@$
 
 const credentialsPath = process.env.GOOGLE_CREDENTIALS || commander.googleCredentials || ".credentials.json";
 const googleAdminEmail = process.env.GOOGLE_ADMIN_EMAIL || commander.googleAdminEmail || "";
-const rules = process.env.SYNC_RULES || commander.rules || [];
+const rules = process.env.RULES || commander.rules || [];
+const staticRules = process.env.STATIC_RULES || commander.staticRules || [];
 const mode = process.env.MODE || commander.mode || "sync";
-const exclude = process.env.EXCLUDE || commander.exclude || "";
+const excludeRole = process.env.EXCLUDE_ROLE || commander.excludeRole || "";
 
 const interval = process.env.INTERVAL || commander.interval || 24 * 60 * 60 * 1000;
 const metricsInterval = collectDefaultMetrics();
@@ -280,6 +287,8 @@ const sync = async () => {
         updateRunning = true;
         const grafanaMembers = {}; // { orgId: ["email1","email2"]}
         const googleMembers = {}; // { orgId: ["email1","email2"]}
+
+        // Build grafana and google users cache
         await Promise.all(rules.map(async (rule) => {
             try {
                 const groupEmail = rule.split(":")[0];
@@ -306,6 +315,8 @@ const sync = async () => {
                 logger.error(e);
             }
         }));
+
+        // create or update all google users in grafana
         await Promise.all(Object.keys(googleMembers).map(async (uniqueId) => {
             const emails = googleMembers[uniqueId];
             const orgId = uniqueId.split(":")[0];
@@ -329,6 +340,39 @@ const sync = async () => {
                 }
             }));
         }));
+
+        // create or update static users
+        await Promise.all(staticRules.map(async (rule) => {
+            const userEmail = rule.split(":")[0];
+            const orgName = rule.split(":")[1];
+            const role = rule.split(":")[2];
+            if (!userEmail || !orgName || !role) {
+                throw new Error("Email or organization name or role missing.");
+            }
+            const orgId = await getGrafanaOrgId(orgName);
+            if (!orgId) {
+                throw new Error("Could not get grafana organisation");
+            }
+            const uniqueId = `${orgId}:${role}`;
+            try {
+                const userId = await getGrafanaUserId(userEmail);
+                if (userId) {
+                    if (!grafanaMembers[uniqueId].includes(userEmail)) {
+                        await createGrafanaUser(orgId, userEmail, role);
+                    } else {
+                        await updateGrafanaUser(orgId, userId, role);
+                    }
+                }
+            } catch (e) {
+                logger.error(e);
+            }
+            finally {
+                logger.debug(`Remove user ${userEmail} from sync map.`);
+                grafanaMembers[uniqueId] = grafanaMembers[uniqueId].filter(e => e !== userEmail);
+            }
+        }));
+
+        // delete users which are not in google groups nor static rules
         if (mode === "sync") {
             await Promise.all(Object.keys(grafanaMembers).map(async (uniqueId) => {
                 const emails = grafanaMembers[uniqueId];
@@ -337,7 +381,7 @@ const sync = async () => {
                     const userId = await getGrafanaUserId(email);
                     if (userId) {
                         const userRole = await getGrafanaUserRole(userId, orgId);
-                        if (exclude !== userRole) {
+                        if (excludeRole !== userRole) {
                             await deleteGrafanaUser(orgId, userId);
                         }
                     }
