@@ -6,6 +6,8 @@
 
 Grafana GSuite Synchroniser pulls a Google Group, extracts Google Group Member Emails and updates the Grafana Organisation Users.
 
+[![graph](./graph.png)](./graph.png)
+
 ### Requirements
 
 - The service account's private key file: **--google-credentials** flag
