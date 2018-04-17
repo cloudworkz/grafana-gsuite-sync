@@ -357,7 +357,7 @@ const sync = async () => {
             try {
                 const userId = await getGrafanaUserId(userEmail);
                 if (userId) {
-                    if (!grafanaMembers[uniqueId].includes(userEmail)) {
+                    if (grafanaMembers[uniqueId] && !grafanaMembers[uniqueId].includes(userEmail)) {
                         await createGrafanaUser(orgId, userEmail, role);
                     } else {
                         await updateGrafanaUser(orgId, userId, role);
@@ -367,8 +367,10 @@ const sync = async () => {
                 logger.error(e);
             }
             finally {
-                logger.debug(`Remove user ${userEmail} from sync map.`);
-                grafanaMembers[uniqueId] = grafanaMembers[uniqueId].filter(e => e !== userEmail);
+                if (grafanaMembers[uniqueId]) {
+                    logger.debug(`Remove user ${userEmail} from sync map.`);
+                    grafanaMembers[uniqueId] = grafanaMembers[uniqueId].filter(e => e !== userEmail);
+                }
             }
         }));
 
