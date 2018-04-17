@@ -6,7 +6,7 @@
 
 Grafana GSuite Synchroniser pulls a Google Group, extracts Google Group Member Emails and updates the Grafana Organisation Users.
 
-[![graph](./graph.png)](./graph.png)
+[![graph](https://raw.githubusercontent.com/google-cloud-tools/grafana-gsuite-sync/master/graph.png)](https://raw.githubusercontent.com/google-cloud-tools/grafana-gsuite-sync/master/graph.png)
 
 ### Requirements
 
