@@ -323,6 +323,7 @@ const sync = async () => {
             const role = uniqueId.split(":")[1];
             await Promise.all(emails.map(async (email) => {
                 try {
+                    logger.info({ email, orgId, role }, "Sync gsuite rule");
                     const userId = await getGrafanaUserId(email);
                     if (userId) {
                         if (!grafanaMembers[uniqueId].includes(email)) {
@@ -341,40 +342,7 @@ const sync = async () => {
             }));
         }));
 
-        // create or update static users
-        await Promise.all(staticRules.map(async (rule) => {
-            const userEmail = rule.split(":")[0];
-            const orgName = rule.split(":")[1];
-            const role = rule.split(":")[2];
-            if (!userEmail || !orgName || !role) {
-                throw new Error("Email or organization name or role missing.");
-            }
-            const orgId = await getGrafanaOrgId(orgName);
-            if (!orgId) {
-                throw new Error("Could not get grafana organisation");
-            }
-            const uniqueId = `${orgId}:${role}`;
-            try {
-                const userId = await getGrafanaUserId(userEmail);
-                if (userId) {
-                    try {
-                        await createGrafanaUser(orgId, userEmail, role);
-                    }catch(e){
-                        await updateGrafanaUser(orgId, userId, role);
-                    }
-                }
-            } catch (e) {
-                logger.error(e);
-            }
-            finally {
-                if (grafanaMembers[uniqueId]) {
-                    logger.debug(`Remove user ${userEmail} from sync map.`);
-                    grafanaMembers[uniqueId] = grafanaMembers[uniqueId].filter(e => e !== userEmail);
-                }
-            }
-        }));
-
-        // delete users which are not in google groups nor static rules
+        // delete users which are not in google groups
         if (mode === "sync") {
             await Promise.all(Object.keys(grafanaMembers).map(async (uniqueId) => {
                 const emails = grafanaMembers[uniqueId];
@@ -390,6 +358,41 @@ const sync = async () => {
                 }));
             }));
         }
+
+        // create or update static users
+        await Promise.all(staticRules.map(async (rule) => {
+            const email = rule.split(":")[0];
+            const orgName = rule.split(":")[1];
+            const role = rule.split(":")[2];
+            if (!email || !orgName || !role) {
+                throw new Error("Email or organization name or role missing.");
+            }
+            const orgId = await getGrafanaOrgId(orgName);
+            if (!orgId) {
+                throw new Error("Could not get grafana organisation");
+            }
+            logger.info({ email, orgId, role }, "Sync static rule");
+            const uniqueId = `${orgId}:${role}`;
+            try {
+                const userId = await getGrafanaUserId(email);
+                if (userId) {
+                    try {
+                        await createGrafanaUser(orgId, email, role);
+                    }catch(e){
+                        await updateGrafanaUser(orgId, userId, role);
+                    }
+                }
+            } catch (e) {
+                logger.error(e);
+            }
+            finally {
+                if (grafanaMembers[uniqueId]) {
+                    logger.debug(`Remove user ${email} from sync map.`);
+                    grafanaMembers[uniqueId] = grafanaMembers[uniqueId].filter(e => e !== email);
+                }
+            }
+        }));
+
         logger.info("End sync process");
         updateRunning = false;
     } catch (e) {
