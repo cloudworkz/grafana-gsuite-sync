@@ -316,6 +316,9 @@ const sync = async () => {
             }
         }));
 
+        logger.debug(googleMembers, "Google members map before create/update")
+        logger.debug(googleMembers, "Grafana members map before create/update")
+
         // create or update all google users in grafana
         await Promise.all(Object.keys(googleMembers).map(async (uniqueId) => {
             const emails = googleMembers[uniqueId];
@@ -341,6 +344,9 @@ const sync = async () => {
                 }
             }));
         }));
+
+        logger.debug(googleMembers, "Google members map before delete")
+        logger.debug(googleMembers, "Grafana members map before delete")
 
         // delete users which are not in google groups
         if (mode === "sync") {
