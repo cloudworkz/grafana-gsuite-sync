@@ -54,7 +54,7 @@ const grafanaPassword = process.env.GRAFANA_PASSWORD || commander.grafanaPasswor
 const grafanaUri = `${grafanaProtocol}://${grafanaUsername}:${grafanaPassword}@${grafanaHost}`;
 
 const credentialsPath = process.env.GOOGLE_CREDENTIALS || commander.googleCredentials || ".credentials.json";
-const credentialsData = process.env.GOOGLE_CREDENTIALS_DATA || command.googleCredentialsData;;
+const credentialsData = process.env.GOOGLE_CREDENTIALS_DATA || commander.googleCredentialsData;;
 const googleAdminEmail = process.env.GOOGLE_ADMIN_EMAIL || commander.googleAdminEmail || "";
 const rules = process.env.RULES || commander.rules || [];
 const staticRules = process.env.STATIC_RULES || commander.staticRules || [];
