@@ -18,6 +18,7 @@ commander
     .option("-U, --grafana-username [grafana-username]", "Grafana API admin username", "")
     .option("-P, --grafana-password <grafana-password>", "Grafana API admin password", "")
     .option("-C, --google-credentials <google-credentials>", "Path to google admin directory credentials file", "")
+    .option("-D, --google-credentials-data <google-credentials-data>", "The contents of the google directory credentials file", "")
     .option("-A, --google-admin-email <google-admin-email>", "The Google Admin Email for subject", "")
     .option(
         "-r, --rules <rules>",
@@ -53,6 +54,7 @@ const grafanaPassword = process.env.GRAFANA_PASSWORD || commander.grafanaPasswor
 const grafanaUri = `${grafanaProtocol}://${grafanaUsername}:${grafanaPassword}@${grafanaHost}`;
 
 const credentialsPath = process.env.GOOGLE_CREDENTIALS || commander.googleCredentials || ".credentials.json";
+const credentialsData = process.env.GOOGLE_CREDENTIALS_DATA || command.googleCredentialsData;;
 const googleAdminEmail = process.env.GOOGLE_ADMIN_EMAIL || commander.googleAdminEmail || "";
 const rules = process.env.RULES || commander.rules || [];
 const staticRules = process.env.STATIC_RULES || commander.staticRules || [];
@@ -76,7 +78,7 @@ const getGoogleApiClient = async () => {
     }
     try {
         logger.debug("Get google api client");
-        const content = await readFileAsync(credentialsPath);
+        const content = credentialsData || await readFileAsync(credentialsPath);
         const credentials = JSON.parse(content.toString());
         const client = auth.fromJSON(credentials);
         client.subject = googleAdminEmail;
