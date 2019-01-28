@@ -6,10 +6,16 @@
   "repository": "git@github.com:yacut/grafana-gsuite-sync.git",
   "author": "yacut",
   "license": "MIT",
+  "bin": {
+    "anon-kafka-mirror": "dist/index.js"
+  },
   "scripts": {
-    "start": "node src/index.js",
-    "debug": "node --inspect=5858 src/index.js",
-    "test": "NODE_ENV=test nyc _mocha --exit --timeout 10000 && nyc check-coverage"
+    "build": "yarn clean && yarn tsc",
+    "clean": "rimraf dist",
+    "start": "node dist/index.js",
+    "lint": "tslint \"lib/**/*.ts\" --project tsconfig.json",
+    "test": "NODE_ENV=test nyc _mocha --exit --timeout 10000 && nyc check-coverage",
+    "tsc": "tsc"
   },
   "dependencies": {
     "commander": "^2.15.1",
@@ -21,5 +27,16 @@
     "prom-client": "^11.0.0",
     "request": "^2.85.0",
     "request-promise": "^4.2.2"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.1.7",
+    "@types/express": "^4.16.1",
+    "@types/mocha": "^5.2.5",
+    "@types/node": "^10.12.18",
+    "@types/pino": "^5.8.4",
+    "rimraf": "^2.6.3",
+    "ts-node": "^8.0.2",
+    "tslint": "^5.12.1",
+    "typescript": "^3.2.4"
   }
 }
