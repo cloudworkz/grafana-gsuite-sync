@@ -182,9 +182,9 @@ const getGrafanaUserId = async (email) => {
     }
 };
 
-const getGrafanaUserRole = async (userId, orgId) => {
+const getGrafanaUserRole = async (userId, orgId, email) => {
     try {
-        logger.debug({ userId }, "Get grafana user.");
+        logger.debug({ userId , email }, "Get grafana user role.");
         const response = await request({
             headers: {
                 "Accept": "application/json",
@@ -193,7 +193,7 @@ const getGrafanaUserRole = async (userId, orgId) => {
             json: true,
             uri: `${grafanaUri}/api/users/${userId}/orgs`,
         });
-        logger.debug({ userId, response }, "Got grafana user.");
+        logger.debug({ userId, email, response }, "Got grafana user.");
         if (response.constructor !== Array) {
             throw new Error(`Could not get user: ${userId}`);
         }
@@ -253,11 +253,12 @@ const updateGrafanaUser = async (orgId, userId, role) => {
     }
 };
 
-const deleteGrafanaUser = async (orgId, userId) => {
+const deleteGrafanaUser = async (orgId, userId, email) => {
     try {
         logger.debug({
             orgId,
             userId,
+            email,
         }, "Delete grafana user.");
         const response = await request({
             method: "DELETE",
@@ -317,7 +318,7 @@ const sync = async () => {
         }));
 
         logger.debug(googleMembers, "Google members map before create/update")
-        logger.debug(googleMembers, "Grafana members map before create/update")
+        logger.debug(grafanaMembers, "Grafana members map before create/update")
 
         // create or update all google users in grafana
         await Promise.all(Object.keys(googleMembers).map(async (uniqueId) => {
@@ -346,7 +347,7 @@ const sync = async () => {
         }));
 
         logger.debug(googleMembers, "Google members map before delete")
-        logger.debug(googleMembers, "Grafana members map before delete")
+        logger.debug(grafanaMembers, "Grafana members map before delete")
 
         // delete users which are not in google groups
         if (mode === "sync") {
@@ -356,9 +357,9 @@ const sync = async () => {
                 await Promise.all(emails.map(async (email) => {
                     const userId = await getGrafanaUserId(email);
                     if (userId) {
-                        const userRole = await getGrafanaUserRole(userId, orgId);
+                        const userRole = await getGrafanaUserRole(userId, orgId, email);
                         if (excludeRole !== userRole) {
-                            await deleteGrafanaUser(orgId, userId);
+                            await deleteGrafanaUser(orgId, userId, email);
                         }
                     }
                 }));
