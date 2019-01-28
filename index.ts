@@ -363,7 +363,7 @@ const sync = async () => {
                     const userId = await getGrafanaUserId(email);
                     if (userId) {
                         const userRole = await getGrafanaUserRole(userId, orgId, email);
-                        if (excludeRole !== userRole) {
+                        if (excludeRole !== userRole && !googleMembers[uniqueId].find((e) => e === email)) {
                             await deleteGrafanaUser(orgId, userId, email);
                         }
                     }
