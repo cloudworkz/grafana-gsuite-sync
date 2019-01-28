@@ -139,7 +139,7 @@ const getGrafanaOrgId = async (name: string) => {
     }
 };
 
-const getGrafanaOrgUsers = async (orgId: string) => {
+const getGrafanaOrgUsers = async (orgId: string, role: string) => {
     try {
         logger.debug({ orgId }, "Get grafana organisation users.");
         const response = await request({
@@ -154,7 +154,10 @@ const getGrafanaOrgUsers = async (orgId: string) => {
         if (response.constructor !== Array) {
             return [];
         }
-        return response.filter((m) => m.email && m.email !== "admin@localhost").map((m) => m.email);
+        return response
+            .filter((m) => m.email && m.email !== "admin@localhost")
+            .filter((m) => m.role && m.role === role)
+            .map((m) => m.emai);
     } catch (e) {
         logger.error({ orgId }, e);
     }
@@ -305,10 +308,12 @@ const sync = async () => {
                     throw new Error("Could not get grafana organisation");
                 }
                 const uniqueId = `${orgId}:${role}`;
-                grafanaMembers[uniqueId] = (grafanaMembers[uniqueId] || []).concat(await getGrafanaOrgUsers(orgId));
+                grafanaMembers[uniqueId] = (grafanaMembers[uniqueId] || [])
+                    .concat(await getGrafanaOrgUsers(orgId, role));
 
                 await getGoogleApiClient();
-                googleMembers[uniqueId] = (googleMembers[uniqueId] || []).concat(await getGroupMembers(groupEmail));
+                googleMembers[uniqueId] = (googleMembers[uniqueId] || [])
+                    .concat(await getGroupMembers(groupEmail));
 
                 success.inc();
 
