@@ -205,7 +205,7 @@ var getGrafanaOrgId = function (name) { return __awaiter(_this, void 0, void 0, 
         }
     });
 }); };
-var getGrafanaOrgUsers = function (orgId) { return __awaiter(_this, void 0, void 0, function () {
+var getGrafanaOrgUsers = function (orgId, role) { return __awaiter(_this, void 0, void 0, function () {
     var response, e_3;
     return __generator(this, function (_a) {
         switch (_a.label) {
@@ -226,7 +226,10 @@ var getGrafanaOrgUsers = function (orgId) { return __awaiter(_this, void 0, void
                 if (response.constructor !== Array) {
                     return [2, []];
                 }
-                return [2, response.filter(function (m) { return m.email && m.email !== "admin@localhost"; }).map(function (m) { return m.email; })];
+                return [2, response
+                        .filter(function (m) { return m.email && m.email !== "admin@localhost"; })
+                        .filter(function (m) { return m.role && m.role === role; })
+                        .map(function (m) { return m.emai; })];
             case 2:
                 e_3 = _a.sent();
                 logger.error({ orgId: orgId }, e_3);
@@ -266,12 +269,11 @@ var getGrafanaUserId = function (email) { return __awaiter(_this, void 0, void 0
     });
 }); };
 var getGrafanaUserRole = function (userId, orgId, email) { return __awaiter(_this, void 0, void 0, function () {
-    var response, userOrgs, e_5;
+    var response, userOrgs, role, e_5;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 _a.trys.push([0, 2, , 3]);
-                logger.debug({ userId: userId, email: email }, "Get grafana user role.");
                 return [4, request({
                         headers: {
                             "Accept": "application/json",
@@ -290,7 +292,9 @@ var getGrafanaUserRole = function (userId, orgId, email) { return __awaiter(_thi
                 if (!userOrgs || userOrgs.length !== 1) {
                     return [2, ""];
                 }
-                return [2, userOrgs[0].role];
+                role = userOrgs[0].role;
+                logger.debug({ userId: userId, email: email, role: role }, "Got grafana user role.");
+                return [2, role];
             case 2:
                 e_5 = _a.sent();
                 logger.error({ userId: userId }, e_5);
@@ -432,7 +436,7 @@ var sync = function () { return __awaiter(_this, void 0, void 0, function () {
                                     _a = grafanaMembers_1;
                                     _b = uniqueId;
                                     _d = (_c = (grafanaMembers_1[uniqueId] || [])).concat;
-                                    return [4, getGrafanaOrgUsers(orgId)];
+                                    return [4, getGrafanaOrgUsers(orgId, role)];
                                 case 2:
                                     _a[_b] = _d.apply(_c, [_j.sent()]);
                                     return [4, getGoogleApiClient()];
@@ -479,7 +483,7 @@ var sync = function () { return __awaiter(_this, void 0, void 0, function () {
                                                     case 1:
                                                         userId = _a.sent();
                                                         if (!userId) return [3, 5];
-                                                        if (!!grafanaMembers_1[uniqueId].includes(email)) return [3, 3];
+                                                        if (!!grafanaMembers_1[uniqueId].find(function (e) { return e === email; })) return [3, 3];
                                                         return [4, createGrafanaUser(orgId, email, role)];
                                                     case 2:
                                                         _a.sent();
@@ -531,7 +535,7 @@ var sync = function () { return __awaiter(_this, void 0, void 0, function () {
                                                         return [4, getGrafanaUserRole(userId, orgId, email)];
                                                     case 2:
                                                         userRole = _a.sent();
-                                                        if (!(excludeRole !== userRole)) return [3, 4];
+                                                        if (!(excludeRole !== userRole && !googleMembers_1[uniqueId].find(function (e) { return e === email; }))) return [3, 4];
                                                         return [4, deleteGrafanaUser(orgId, userId, email)];
                                                     case 3:
                                                         _a.sent();
