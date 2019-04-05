@@ -1,0 +1,5 @@
+--require ts-node/register
+--exit
+--reporter spec
+--timeout 1000
+test/**/*.ts
