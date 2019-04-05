@@ -1,0 +1,32 @@
+{
+    "compilerOptions": {
+        "lib": [
+            "es2015",
+            "es6",
+            "dom"
+        ],
+        "module": "commonjs",
+        "target": "es5",
+        "noImplicitAny": false,
+        "moduleResolution": "node",
+        "emitDecoratorMetadata": true,
+        "noUnusedLocals": false,
+        "sourceMap": true,
+        "declaration": true,
+        "rootDir": ".",
+        "outDir": "dist",
+        "allowSyntheticDefaultImports": true,
+        "removeComments": true,
+        "experimentalDecorators": true,
+        "types": [
+            "node",
+            "mocha"
+        ]
+    },
+    "include": [
+        "index.ts",
+        "package.json",
+        "src/**/*",
+        "spec/**/*"
+    ]
+}

@@ -1,15 +1,14 @@
 #!/usr/bin/env node
-"use strict";
 
-const commander = require("commander");
-const express = require("express");
-const { readFile } = require("fs");
-const { auth } = require("google-auth-library");
-const { google } = require("googleapis");
-const pino = require("pino");
-const { collectDefaultMetrics, Counter, register } = require("prom-client");
-const request = require("request-promise");
-const { promisify } = require("util");
+import * as commander from "commander";
+import * as express from "express";
+import { readFile } from "fs";
+import { auth } from "google-auth-library";
+import { google } from "googleapis";
+import * as pino from "pino";
+import { collectDefaultMetrics, Counter, register } from "prom-client";
+import * as request from "request-promise";
+import { promisify } from "util";
 
 commander
     .option("-p, --port [port]", "Server port")
@@ -24,16 +23,17 @@ commander
         "-r, --rules <rules>",
         "Comma separated rules to sync <google group email>:<grafana org name>:<users role> \n\t" +
         "(e.g. 'group@test.com:Main:Admin')",
-        (val) => val.split(",")
+        (val) => val.split(","),
     )
     .option(
         "-s, --static-rules <static-rules>",
         "Comma separated static rules to create <email>:<grafana org name>:<user role> \n\t" +
         "(e.g. 'user@test.com:Main:Viewer')",
-        (val) => val.split(",")
+        (val) => val.split(","),
     )
     .option("-l, --level [level]", "Log level", /^(debug|info|warn|error|fatal)$/i)
-    .option("-m, --mode [mode]", "How users are sychronized between google and grafana: sync or upsert-only", /^(sync|upsert-only)$/i)
+    .option("-m, --mode [mode]",
+        "How users are sychronized between google and grafana: sync or upsert-only", /^(sync|upsert-only)$/i)
     .option("-e, --exclude-role [exclude-role]", "Exclude role to delete", /^(Admin|Editor|Viewer)$/i)
     .option("-i, --interval [interval]", "Sync interval")
     .parse(process.argv);
@@ -80,7 +80,7 @@ const getGoogleApiClient = async () => {
         logger.debug("Get google api client");
         const content = credentialsData || await readFileAsync(credentialsPath);
         const credentials = JSON.parse(content.toString());
-        const client = auth.fromJSON(credentials);
+        const client: any = auth.fromJSON(credentials, { });
         client.subject = googleAdminEmail;
         client.scopes = [
             "https://www.googleapis.com/auth/admin.directory.group.member.readonly",
@@ -89,14 +89,13 @@ const getGoogleApiClient = async () => {
         await client.authorize();
         this.client = client;
         this.service = google.admin("directory_v1");
-    }
-    catch(e){
+    } catch (e) {
         logger.error(e);
     }
 };
 
-const getGroupMembers = async (email) => {
-    if(!this.service || !this.client){
+const getGroupMembers = async (email: string) => {
+    if (!this.service || !this.client) {
         logger.debug("The google api is not configured.");
         return [];
     }
@@ -110,8 +109,8 @@ const getGroupMembers = async (email) => {
         throw new Error("Failed to get members list.");
     }
     let members = [];
-    await Promise.all(response.data.members.filter(m => m.email).map(async (member) => {
-        if (member.type === "GROUP"){
+    await Promise.all(response.data.members.filter((m) => m.email).map(async (member) => {
+        if (member.type === "GROUP") {
             const subMembers = await getGroupMembers(member.email);
             members = members.concat(subMembers);
         } else {
@@ -121,7 +120,7 @@ const getGroupMembers = async (email) => {
     return members;
 };
 
-const getGrafanaOrgId = async (name) => {
+const getGrafanaOrgId = async (name: string) => {
     try {
         logger.debug({name}, "Get grafana organisation by name.");
         const response = await request({
@@ -137,12 +136,12 @@ const getGrafanaOrgId = async (name) => {
             throw new Error(`Could not get grafana orgatiosation by name ${name}`);
         }
         return response.id;
-    } catch(e){
+    } catch (e) {
         logger.error({name}, e);
     }
 };
 
-const getGrafanaOrgUsers = async (orgId) => {
+const getGrafanaOrgUsers = async (orgId: string, role: string) => {
     try {
         logger.debug({ orgId }, "Get grafana organisation users.");
         const response = await request({
@@ -157,13 +156,16 @@ const getGrafanaOrgUsers = async (orgId) => {
         if (response.constructor !== Array) {
             return [];
         }
-        return response.filter(m => m.email && m.email !== "admin@localhost").map(m => m.email);
+        return response
+            .filter((m) => m.email && m.email !== "admin@localhost")
+            .filter((m) => m.role && m.role === role)
+            .map((m) => m.emai);
     } catch (e) {
         logger.error({ orgId }, e);
     }
 };
 
-const getGrafanaUserId = async (email) => {
+const getGrafanaUserId = async (email: string) => {
     try {
         logger.debug({ email }, "Get grafana user id.");
         const response = await request({
@@ -184,9 +186,9 @@ const getGrafanaUserId = async (email) => {
     }
 };
 
-const getGrafanaUserRole = async (userId, orgId) => {
+const getGrafanaUserRole = async (userId: string, orgId: string, email: string) => {
     try {
-        logger.debug({ userId }, "Get grafana user.");
+
         const response = await request({
             headers: {
                 "Accept": "application/json",
@@ -195,21 +197,23 @@ const getGrafanaUserRole = async (userId, orgId) => {
             json: true,
             uri: `${grafanaUri}/api/users/${userId}/orgs`,
         });
-        logger.debug({ userId, response }, "Got grafana user.");
+        logger.debug({ userId, email, response }, "Got grafana user.");
         if (response.constructor !== Array) {
             throw new Error(`Could not get user: ${userId}`);
         }
-        const userOrgs = response.filter(u => u.orgId.toString() === orgId.toString());
-        if (!userOrgs || userOrgs.length !== 1){
+        const userOrgs = response.filter((u) => u.orgId.toString() === orgId.toString());
+        if (!userOrgs || userOrgs.length !== 1) {
             return "";
         }
-        return userOrgs[0].role;
+        const role = userOrgs[0].role;
+        logger.debug({ userId, email, role }, "Got grafana user role.");
+        return role;
     } catch (e) {
         logger.error({ userId }, e);
     }
 };
 
-const createGrafanaUser = async (orgId, email, role) => {
+const createGrafanaUser = async (orgId: string, email: string, role: string) => {
     // Only works if the user already signed up e.g. Google Auth
     try {
         logger.debug({ orgId, email, role }, "Create grafana user.");
@@ -233,7 +237,7 @@ const createGrafanaUser = async (orgId, email, role) => {
     }
 };
 
-const updateGrafanaUser = async (orgId, userId, role) => {
+const updateGrafanaUser = async (orgId: string, userId: string, role: string) => {
     try {
         logger.debug({ orgId, userId, role }, "Update grafana user.");
         const response = await request({
@@ -255,11 +259,12 @@ const updateGrafanaUser = async (orgId, userId, role) => {
     }
 };
 
-const deleteGrafanaUser = async (orgId, userId) => {
+const deleteGrafanaUser = async (orgId: string, userId: string, email: string) => {
     try {
         logger.debug({
             orgId,
             userId,
+            email,
         }, "Delete grafana user.");
         const response = await request({
             method: "DELETE",
@@ -287,8 +292,8 @@ const sync = async () => {
         }
         logger.info("Start sync process");
         updateRunning = true;
-        const grafanaMembers = {}; // { orgId: ["email1","email2"]}
-        const googleMembers = {}; // { orgId: ["email1","email2"]}
+        const grafanaMembers: { [key: string]: string[] } = {}; // { orgId: ["email1","email2"]}
+        const googleMembers: { [key: string]: string[] } = {}; // { orgId: ["email1","email2"]}
 
         // Build grafana and google users cache
         await Promise.all(rules.map(async (rule) => {
@@ -305,10 +310,12 @@ const sync = async () => {
                     throw new Error("Could not get grafana organisation");
                 }
                 const uniqueId = `${orgId}:${role}`;
-                grafanaMembers[uniqueId] = (grafanaMembers[uniqueId] || []).concat(await getGrafanaOrgUsers(orgId));
+                grafanaMembers[uniqueId] = (grafanaMembers[uniqueId] || [])
+                    .concat(await getGrafanaOrgUsers(orgId, role));
 
                 await getGoogleApiClient();
-                googleMembers[uniqueId] = (googleMembers[uniqueId] || []).concat(await getGroupMembers(groupEmail));
+                googleMembers[uniqueId] = (googleMembers[uniqueId] || [])
+                    .concat(await getGroupMembers(groupEmail));
 
                 success.inc();
 
@@ -318,8 +325,8 @@ const sync = async () => {
             }
         }));
 
-        logger.debug(googleMembers, "Google members map before create/update")
-        logger.debug(googleMembers, "Grafana members map before create/update")
+        logger.debug(googleMembers, "Google members map before create/update");
+        logger.debug(grafanaMembers, "Grafana members map before create/update");
 
         // create or update all google users in grafana
         await Promise.all(Object.keys(googleMembers).map(async (uniqueId) => {
@@ -331,7 +338,7 @@ const sync = async () => {
                     logger.info({ email, orgId, role }, "Sync gsuite rule");
                     const userId = await getGrafanaUserId(email);
                     if (userId) {
-                        if (!grafanaMembers[uniqueId].includes(email)) {
+                        if (!grafanaMembers[uniqueId].find((e) => e === email)) {
                             await createGrafanaUser(orgId, email, role);
                         } else {
                             await updateGrafanaUser(orgId, userId, role);
@@ -339,16 +346,15 @@ const sync = async () => {
                     }
                 } catch (e) {
                     logger.error(e);
-                }
-                finally {
+                } finally {
                     logger.debug(`Remove user ${email} from sync map.`);
-                    grafanaMembers[uniqueId] = grafanaMembers[uniqueId].filter(e => e !== email);
+                    grafanaMembers[uniqueId] = grafanaMembers[uniqueId].filter((e) => e !== email);
                 }
             }));
         }));
 
-        logger.debug(googleMembers, "Google members map before delete")
-        logger.debug(googleMembers, "Grafana members map before delete")
+        logger.debug(googleMembers, "Google members map before delete");
+        logger.debug(grafanaMembers, "Grafana members map before delete");
 
         // delete users which are not in google groups
         if (mode === "sync") {
@@ -358,9 +364,9 @@ const sync = async () => {
                 await Promise.all(emails.map(async (email) => {
                     const userId = await getGrafanaUserId(email);
                     if (userId) {
-                        const userRole = await getGrafanaUserRole(userId, orgId);
-                        if (excludeRole !== userRole) {
-                            await deleteGrafanaUser(orgId, userId);
+                        const userRole = await getGrafanaUserRole(userId, orgId, email);
+                        if (excludeRole !== userRole && !googleMembers[uniqueId].find((e) => e === email)) {
+                            await deleteGrafanaUser(orgId, userId, email);
                         }
                     }
                 }));
@@ -386,17 +392,16 @@ const sync = async () => {
                 if (userId) {
                     try {
                         await createGrafanaUser(orgId, email, role);
-                    }catch(e){
+                    } catch (e) {
                         await updateGrafanaUser(orgId, userId, role);
                     }
                 }
             } catch (e) {
                 logger.error(e);
-            }
-            finally {
+            } finally {
                 if (grafanaMembers[uniqueId]) {
                     logger.debug(`Remove user ${email} from sync map.`);
-                    grafanaMembers[uniqueId] = grafanaMembers[uniqueId].filter(e => e !== email);
+                    grafanaMembers[uniqueId] = grafanaMembers[uniqueId].filter((e) => e !== email);
                 }
             }
         }));
