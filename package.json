@@ -25,6 +25,7 @@
     "googleapis": "^40.0.0",
     "kubernetes-client": "^8.2.0",
     "pino": "^5.12.6",
+    "pino-pretty": "^3.2.1",
     "prom-client": "^11.5.2",
     "request": "^2.88.0",
     "request-promise": "^4.2.4"
