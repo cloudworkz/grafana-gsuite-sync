@@ -165,7 +165,7 @@ class GrafanaSync {
                 },
                 json: true,
                 uri: `${this.grafanaUri}/api/orgs/name/${name}`,
-            });
+            }).catch((err) => err.response);
             this.logger.debug({ name, response }, "Got grafana organisation by name.");
             if (!response.id) {
                 throw new Error(`Could not get grafana orgatiosation by name ${name}`);
@@ -186,7 +186,7 @@ class GrafanaSync {
                 },
                 json: true,
                 uri: `${this.grafanaUri}/api/orgs/${orgId}/users`,
-            });
+            }).catch((err) => err.response);
             this.logger.debug({ orgId, response }, "Got grafana organisation users.");
             if (response.constructor !== Array) {
                 return [];
@@ -210,7 +210,7 @@ class GrafanaSync {
                 },
                 json: true,
                 uri: `${this.grafanaUri}/api/users/lookup?loginOrEmail=${email}`,
-            });
+            }).catch((err) => err.response);
             this.logger.debug({ email, response }, "Got grafana user id.");
             if (response.constructor !== Object) {
                 throw new Error(`Could not get user by email: ${email}`);
@@ -230,7 +230,7 @@ class GrafanaSync {
                 },
                 json: true,
                 uri: `${this.grafanaUri}/api/users/${userId}/orgs`,
-            });
+            }).catch((err) => err.response);
             this.logger.debug({ userId, email, response }, "Got grafana user.");
             if (response.constructor !== Array) {
                 throw new Error(`Could not get user: ${userId}`);
@@ -263,7 +263,7 @@ class GrafanaSync {
                 },
                 json: true,
                 uri: `${this.grafanaUri}/api/orgs/${orgId}/users`,
-            });
+            }).catch((err) => err.response);
             this.logger.debug({ orgId, email, role, response }, "Created grafana organisation user.");
             return response;
         } catch (e) {
@@ -285,7 +285,7 @@ class GrafanaSync {
                 },
                 json: true,
                 uri: `${this.grafanaUri}/api/orgs/${orgId}/users/${userId}`,
-            });
+            }).catch((err) => err.response);
             this.logger.debug({ orgId, userId, role, response }, "Updated grafana user.");
             return response;
         } catch (e) {
@@ -308,7 +308,7 @@ class GrafanaSync {
                 },
                 json: true,
                 uri: `${this.grafanaUri}/api/orgs/${orgId}/users/${userId}`,
-            });
+            }).catch((err) => err.response);
             this.logger.debug({ orgId, userId, response }, "Delete grafana user.");
             return response;
         } catch (e) {
