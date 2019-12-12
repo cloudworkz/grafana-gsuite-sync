@@ -10,8 +10,8 @@
     "anon-kafka-mirror": "dist/index.js"
   },
   "scripts": {
-    "prepublish": "yarn build",
-    "build": "yarn clean && yarn tsc",
+    "prepublish": "npm run build",
+    "build": "npm run clean && npm run tsc",
     "clean": "rimraf dist",
     "start": "node dist/index.js",
     "lint": "tslint \"**/*.ts\" --project tsconfig.json",
