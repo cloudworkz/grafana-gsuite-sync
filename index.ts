@@ -196,7 +196,7 @@ class GrafanaSync {
                 .filter((m) => m.role && m.role === role)
                 .map((m) => m.email);
         } catch (e) {
-            this.logger.error({ orgId, error: this.formatError(e) });
+            this.logger.error("Failed to get grafana users", { orgId, error: this.formatError(e) });
         }
     }
 
@@ -217,7 +217,7 @@ class GrafanaSync {
             }
             return response.id;
         } catch (e) {
-            this.logger.error({ email, error: this.formatError(e) });
+            this.logger.error("Failed to get grafana user by email", { email, error: this.formatError(e) });
         }
     }
 
@@ -243,7 +243,7 @@ class GrafanaSync {
             this.logger.debug({ userId, email, role }, "Got grafana user role.");
             return role;
         } catch (e) {
-            this.logger.error({ userId, error: this.formatError(e) });
+            this.logger.error("Failed to get grafana user role", { userId, error: this.formatError(e) });
         }
     }
 
@@ -267,7 +267,7 @@ class GrafanaSync {
             this.logger.debug({ orgId, email, role, response }, "Created grafana organisation user.");
             return response;
         } catch (e) {
-            this.logger.debug({ orgId, email, role, error: this.formatError(e) });
+            this.logger.error("Failed to create grafana user", { orgId, email, role, error: this.formatError(e) });
         }
     }
 
@@ -289,7 +289,7 @@ class GrafanaSync {
             this.logger.debug({ orgId, userId, role, response }, "Updated grafana user.");
             return response;
         } catch (e) {
-            this.logger.error({ orgId, userId, role, error: this.formatError(e) });
+            this.logger.error("Failed to update grafana user", { orgId, userId, role, error: this.formatError(e) });
         }
     }
 
@@ -312,7 +312,7 @@ class GrafanaSync {
             this.logger.debug({ orgId, userId, response }, "Delete grafana user.");
             return response;
         } catch (e) {
-            this.logger.error({ orgId, userId, error: this.formatError(e) });
+            this.logger.error("Failed to dalete grafana user", { orgId, userId, error: this.formatError(e) });
         }
     }
 
@@ -363,7 +363,7 @@ class GrafanaSync {
 
                 } catch (e) {
                     self.fail.inc();
-                    self.logger.error(self.formatError(e));
+                    self.logger.error("Failed to build grafana and google users cache", self.formatError(e));
                 }
             }));
 
@@ -387,7 +387,7 @@ class GrafanaSync {
                             }
                         }
                     } catch (e) {
-                        self.logger.error(self.formatError(e));
+                        self.logger.error("Failed to create or update all google users in grafana", self.formatError(e));
                     } finally {
                         self.logger.debug(`Remove user ${email} from sync map.`);
                         self.grafanaMembers.set(uniqueId, self.grafanaMembers.get(uniqueId).filter((e) => e !== email));
@@ -439,7 +439,7 @@ class GrafanaSync {
                         }
                     }
                 } catch (e) {
-                    self.logger.error(self.formatError(e));
+                    self.logger.error("Failed to create or update static users", self.formatError(e));
                 } finally {
                     if (self.grafanaMembers.get(uniqueId)) {
                         self.logger.debug(`Remove user ${email} from sync map.`);
