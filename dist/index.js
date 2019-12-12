@@ -371,11 +371,11 @@ var GrafanaSync = (function () {
                             this.logger.debug({ orgId: orgId, email: email, role: role }, "The role is already set, so skipping user update");
                             return [2];
                         }
-                        if (oldRole === "Admin" && (role === "Edit" || role === "Viewer")) {
+                        if (oldRole === "Admin" && (role === "Editor" || role === "Viewer")) {
                             this.logger.debug({ orgId: orgId, email: email, role: role }, "The existing role is more powerful, so skipping user update");
                             return [2];
                         }
-                        if (oldRole === "Edit" && role === "Viewer") {
+                        if (oldRole === "Editor" && role === "Viewer") {
                             this.logger.debug({ orgId: orgId, email: email, role: role }, "The existing role is more powerful, so skipping user update");
                             return [2];
                         }
