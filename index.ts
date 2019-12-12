@@ -125,7 +125,7 @@ class GrafanaSync {
             this.client = client;
             this.service = google.admin("directory_v1");
         } catch (e) {
-            this.logger.error({ error: this.formatError(e) });
+            this.logger.error("Failed to get google api client", { error: this.formatError(e) });
         }
     }
 
@@ -172,7 +172,7 @@ class GrafanaSync {
             }
             return response.id;
         } catch (e) {
-            this.logger.error({ name, error: this.formatError(e) });
+            this.logger.error("Failed to get grafana org id", { name, error: this.formatError(e) });
         }
     }
 
@@ -244,6 +244,7 @@ class GrafanaSync {
             return role;
         } catch (e) {
             this.logger.error("Failed to get grafana user role", { userId, error: this.formatError(e) });
+            return "";
         }
     }
 
@@ -271,9 +272,22 @@ class GrafanaSync {
         }
     }
 
-    public async updateGrafanaUser(orgId: string, userId: string, role: string) {
+    public async updateGrafanaUser(orgId: string, userId: string, role: string, email: string) {
         try {
-            this.logger.debug({ orgId, userId, role }, "Update grafana user.");
+            const oldRole = await this.getGrafanaUserRole(userId, orgId, email);
+            if (oldRole === role) {
+                this.logger.debug({ orgId, email, role }, "The role is already set, so skipping user update");
+                return;
+            }
+            if (oldRole === "Admin" && (role === "Edit" || role === "Viewer")) {
+                this.logger.debug({ orgId, email, role }, "The existing role is more powerful, so skipping user update");
+                return;
+            }
+            if (oldRole === "Edit" && role === "Viewer") {
+                this.logger.debug({ orgId, email, role }, "The existing role is more powerful, so skipping user update");
+                return;
+            }
+            this.logger.debug({ orgId, userId, role }, "Updating grafana user.");
             const response = await request({
                 method: "PATCH",
                 headers: {
@@ -312,7 +326,7 @@ class GrafanaSync {
             this.logger.debug({ orgId, userId, response }, "Delete grafana user.");
             return response;
         } catch (e) {
-            this.logger.error("Failed to dalete grafana user", { orgId, userId, error: this.formatError(e) });
+            this.logger.error("Failed to delete grafana user", { orgId, userId, error: this.formatError(e) });
         }
     }
 
@@ -383,7 +397,7 @@ class GrafanaSync {
                             if (!self.grafanaMembers.get(uniqueId).find((e) => e === email)) {
                                 await self.createGrafanaUser(orgId, email, role);
                             } else {
-                                await self.updateGrafanaUser(orgId, userId, role);
+                                await self.updateGrafanaUser(orgId, userId, role, email);
                             }
                         }
                     } catch (e) {
@@ -435,7 +449,7 @@ class GrafanaSync {
                         try {
                             await self.createGrafanaUser(orgId, email, role);
                         } catch (e) {
-                            await self.updateGrafanaUser(orgId, userId, role);
+                            await self.updateGrafanaUser(orgId, userId, role, email);
                         }
                     }
                 } catch (e) {
