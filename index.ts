@@ -363,7 +363,7 @@ class GrafanaSync {
 
                 } catch (e) {
                     self.fail.inc();
-                    self.logger.error(e);
+                    self.logger.error(self.formatError(e));
                 }
             }));
 
@@ -387,7 +387,7 @@ class GrafanaSync {
                             }
                         }
                     } catch (e) {
-                        self.logger.error(e);
+                        self.logger.error(self.formatError(e));
                     } finally {
                         self.logger.debug(`Remove user ${email} from sync map.`);
                         self.grafanaMembers.set(uniqueId, self.grafanaMembers.get(uniqueId).filter((e) => e !== email));
@@ -439,7 +439,7 @@ class GrafanaSync {
                         }
                     }
                 } catch (e) {
-                    self.logger.error(e);
+                    self.logger.error(self.formatError(e));
                 } finally {
                     if (self.grafanaMembers.get(uniqueId)) {
                         self.logger.debug(`Remove user ${email} from sync map.`);
@@ -454,7 +454,7 @@ class GrafanaSync {
             self.updateRunning = false;
         } catch (e) {
             self.fail.inc();
-            self.logger.error(e);
+            self.logger.error(self.formatError(e));
             self.updateRunning = false;
         }
     }
