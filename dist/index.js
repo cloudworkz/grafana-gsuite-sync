@@ -72,37 +72,8 @@ var app = express();
 var port = process.env.PORT || commander.port || 5000;
 var GrafanaSync = (function () {
     function GrafanaSync() {
-        this.updateRunning = false;
-        this.logLevel = process.env.LEVEL || commander.level || "info";
-        this.logger = pino({
-            prettyPrint: process.env.NODE_ENV !== "production",
-            level: this.logLevel,
-        });
-        this.grafanaProtocol = process.env.GRAFANA_PROTOCOL || commander.grafanaProtocol || "http";
-        this.grafanaHost = process.env.GRAFANA_HOST || commander.grafanaHost || "localhost:3000";
-        this.grafanaUsername = process.env.GRAFANA_USERNAME || commander.grafanaUsername || "admin";
-        this.grafanaPassword = process.env.GRAFANA_PASSWORD || commander.grafanaPassword || "";
-        this.grafanaUri = this.grafanaProtocol + "://" + this.grafanaUsername + ":" + this.grafanaPassword + "@" + this.grafanaHost;
-        this.credentialsPath = process.env.GOOGLE_CREDENTIALS || commander.googleCredentials || ".credentials.json";
-        this.googleAdminEmail = process.env.GOOGLE_ADMIN_EMAIL || commander.googleAdminEmail || "";
-        this.rules = process.env.RULES || commander.rules || [];
-        this.staticRules = process.env.STATIC_RULES || commander.staticRules || [];
-        this.mode = process.env.MODE || commander.mode || "sync";
-        this.excludeRole = process.env.EXCLUDE_ROLE || commander.excludeRole || "";
-        this.metricsInterval = prom_client_1.collectDefaultMetrics();
-        this.success = new prom_client_1.Counter({
-            help: "Successful grafana gsuite sync counter",
-            name: "grafana_gsuite_sync_success",
-        });
-        this.fail = new prom_client_1.Counter({
-            help: "Unsuccessful grafana gsuite sync counter",
-            name: "grafana_gsuite_sync_fail",
-        });
-        this.grafanaMembers = new Map();
-        this.googleMembers = new Map();
-    }
-    GrafanaSync.prototype.getGoogleApiClient = function () {
-        return __awaiter(this, void 0, void 0, function () {
+        var _this = this;
+        this.getGoogleApiClient = function () { return __awaiter(_this, void 0, void 0, function () {
             var content, credentials, client, e_1;
             return __generator(this, function (_a) {
                 switch (_a.label) {
@@ -137,64 +108,85 @@ var GrafanaSync = (function () {
                     case 5: return [2];
                 }
             });
-        });
-    };
-    GrafanaSync.prototype.getGroupMembers = function (email) {
-        return __awaiter(this, void 0, void 0, function () {
-            var response, members;
-            var _this = this;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4, this.getGoogleApiClient()];
-                    case 1:
-                        _a.sent();
-                        if (!this.service || !this.client) {
-                            this.logger.debug("The google api is not configured.");
-                            return [2, []];
-                        }
-                        return [4, this.service.members.list({
+        }); };
+        this.getGroupMembers = function (email, nextPageToken) {
+            if (nextPageToken === void 0) { nextPageToken = ""; }
+            return __awaiter(_this, void 0, void 0, function () {
+                var options, response, members_1, pageMembers, e_2;
+                var _this = this;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            _a.trys.push([0, 6, , 7]);
+                            return [4, this.getGoogleApiClient()];
+                        case 1:
+                            _a.sent();
+                            if (!this.service || !this.client) {
+                                this.logger.debug("The google api is not configured.");
+                                return [2, []];
+                            }
+                            options = {
                                 auth: this.client,
                                 groupKey: email,
-                            })];
-                    case 2:
-                        response = _a.sent();
-                        if (response.status !== 200 || !response.data || !response.data.members) {
-                            throw new Error("Failed to get members list.");
-                        }
-                        members = [];
-                        return [4, Promise.all(response.data.members.filter(function (m) { return m.email; }).map(function (member) { return __awaiter(_this, void 0, void 0, function () {
-                                var subMembers;
-                                return __generator(this, function (_a) {
-                                    switch (_a.label) {
-                                        case 0:
-                                            if (!(member.type === "GROUP")) return [3, 2];
-                                            return [4, this.getGroupMembers(member.email)];
-                                        case 1:
-                                            subMembers = _a.sent();
-                                            members = members.concat(subMembers);
-                                            return [3, 3];
-                                        case 2:
-                                            members.push(member.email);
-                                            _a.label = 3;
-                                        case 3: return [2];
-                                    }
-                                });
-                            }); }))];
-                    case 3:
-                        _a.sent();
-                        return [2, members];
-                }
+                            };
+                            if (nextPageToken) {
+                                options.pageToken = nextPageToken;
+                            }
+                            return [4, this.service.members.list(options)];
+                        case 2:
+                            response = _a.sent();
+                            if (response.status !== 200 || !response.data || !response.data.members) {
+                                throw new Error("Failed to get members list.");
+                            }
+                            this.logger.debug("Got google response members", { members: response.data.members.map(function (m) { return m.email; }) });
+                            members_1 = [];
+                            return [4, Promise.all(response.data.members.filter(function (m) { return m.email; }).map(function (member) { return __awaiter(_this, void 0, void 0, function () {
+                                    var subMembers;
+                                    return __generator(this, function (_a) {
+                                        switch (_a.label) {
+                                            case 0:
+                                                if (!(member.type === "GROUP")) return [3, 2];
+                                                return [4, this.getGroupMembers(member.email)];
+                                            case 1:
+                                                subMembers = _a.sent();
+                                                members_1 = members_1.concat(subMembers);
+                                                return [3, 3];
+                                            case 2:
+                                                members_1.push(member.email);
+                                                _a.label = 3;
+                                            case 3: return [2];
+                                        }
+                                    });
+                                }); }))];
+                        case 3:
+                            _a.sent();
+                            if (!response.data.nextPageToken) return [3, 5];
+                            this.logger.debug("Find next page");
+                            return [4, this.getGroupMembers(email, response.data.nextPageToken)];
+                        case 4:
+                            pageMembers = _a.sent();
+                            this.logger.debug("Got google page members", { members: pageMembers });
+                            members_1 = members_1.concat(pageMembers);
+                            _a.label = 5;
+                        case 5:
+                            this.logger.debug({ members: members_1 }, "Got google members");
+                            return [2, members_1];
+                        case 6:
+                            e_2 = _a.sent();
+                            this.logger.error({ error: this.formatError(e_2) }, "Failed to get google members");
+                            return [2, []];
+                        case 7: return [2];
+                    }
+                });
             });
-        });
-    };
-    GrafanaSync.prototype.getGrafanaOrgId = function (name) {
-        return __awaiter(this, void 0, void 0, function () {
-            var response, e_2;
+        };
+        this.getGrafanaOrgId = function (name) { return __awaiter(_this, void 0, void 0, function () {
+            var response, e_3;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         _a.trys.push([0, 2, , 3]);
-                        this.logger.debug({ name: name }, "Get grafana organisation by name.");
+                        this.logger.debug({ name: name }, "Get grafana organization by name.");
                         return [4, request({
                                 headers: {
                                     "Accept": "application/json",
@@ -205,28 +197,26 @@ var GrafanaSync = (function () {
                             }).catch(function (err) { return err.response; })];
                     case 1:
                         response = _a.sent();
-                        this.logger.debug({ name: name, response: response }, "Got grafana organisation by name.");
+                        this.logger.debug({ name: name, response: response }, "Got grafana organization by name.");
                         if (!response.id) {
-                            throw new Error("Could not get grafana orgatiosation by name " + name);
+                            throw new Error("Could not get grafana organization by name " + name);
                         }
                         return [2, response.id];
                     case 2:
-                        e_2 = _a.sent();
-                        this.logger.error("Failed to get grafana org id", { name: name, error: this.formatError(e_2) });
-                        return [3, 3];
+                        e_3 = _a.sent();
+                        this.logger.error("Failed to get grafana org id", { name: name, error: this.formatError(e_3) });
+                        return [2, ""];
                     case 3: return [2];
                 }
             });
-        });
-    };
-    GrafanaSync.prototype.getGrafanaOrgUsers = function (orgId, role) {
-        return __awaiter(this, void 0, void 0, function () {
-            var response, e_3;
+        }); };
+        this.getGrafanaOrgUsers = function (orgId, role) { return __awaiter(_this, void 0, void 0, function () {
+            var response, e_4;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         _a.trys.push([0, 2, , 3]);
-                        this.logger.debug({ orgId: orgId }, "Get grafana organisation users.");
+                        this.logger.debug({ orgId: orgId }, "Get grafana organization users.");
                         return [4, request({
                                 headers: {
                                     "Accept": "application/json",
@@ -237,7 +227,7 @@ var GrafanaSync = (function () {
                             }).catch(function (err) { return err.response; })];
                     case 1:
                         response = _a.sent();
-                        this.logger.debug({ orgId: orgId, response: response }, "Got grafana organisation users.");
+                        this.logger.debug({ orgId: orgId, users: response.map(function (r) { return r.email; }) }, "Got grafana organization users.");
                         if (response.constructor !== Array) {
                             return [2, []];
                         }
@@ -246,17 +236,15 @@ var GrafanaSync = (function () {
                                 .filter(function (m) { return m.role && m.role === role; })
                                 .map(function (m) { return m.email; })];
                     case 2:
-                        e_3 = _a.sent();
-                        this.logger.error("Failed to get grafana users", { orgId: orgId, error: this.formatError(e_3) });
-                        return [3, 3];
+                        e_4 = _a.sent();
+                        this.logger.error("Failed to get grafana users", { orgId: orgId, error: this.formatError(e_4) });
+                        return [2, []];
                     case 3: return [2];
                 }
             });
-        });
-    };
-    GrafanaSync.prototype.getGrafanaUserId = function (email) {
-        return __awaiter(this, void 0, void 0, function () {
-            var response, e_4;
+        }); };
+        this.getGrafanaUserId = function (email) { return __awaiter(_this, void 0, void 0, function () {
+            var response, e_5;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -278,17 +266,15 @@ var GrafanaSync = (function () {
                         }
                         return [2, response.id];
                     case 2:
-                        e_4 = _a.sent();
-                        this.logger.error("Failed to get grafana user by email", { email: email, error: this.formatError(e_4) });
-                        return [3, 3];
+                        e_5 = _a.sent();
+                        this.logger.error("Failed to get grafana user by email", { email: email, error: this.formatError(e_5) });
+                        return [2, ""];
                     case 3: return [2];
                 }
             });
-        });
-    };
-    GrafanaSync.prototype.getGrafanaUserRole = function (userId, orgId, email) {
-        return __awaiter(this, void 0, void 0, function () {
-            var response, userOrgs, role, e_5;
+        }); };
+        this.getGrafanaUserRole = function (userId, orgId, email) { return __awaiter(_this, void 0, void 0, function () {
+            var response, userOrgs, role, e_6;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -315,17 +301,15 @@ var GrafanaSync = (function () {
                         this.logger.debug({ userId: userId, email: email, role: role }, "Got grafana user role.");
                         return [2, role];
                     case 2:
-                        e_5 = _a.sent();
-                        this.logger.error("Failed to get grafana user role", { userId: userId, error: this.formatError(e_5) });
+                        e_6 = _a.sent();
+                        this.logger.error("Failed to get grafana user role", { userId: userId, error: this.formatError(e_6) });
                         return [2, ""];
                     case 3: return [2];
                 }
             });
-        });
-    };
-    GrafanaSync.prototype.createGrafanaUser = function (orgId, email, role) {
-        return __awaiter(this, void 0, void 0, function () {
-            var response, e_6;
+        }); };
+        this.createGrafanaUser = function (orgId, email, role) { return __awaiter(_this, void 0, void 0, function () {
+            var response, e_7;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -346,20 +330,312 @@ var GrafanaSync = (function () {
                             }).catch(function (err) { return err.response; })];
                     case 1:
                         response = _a.sent();
-                        this.logger.debug({ orgId: orgId, email: email, role: role, response: response }, "Created grafana organisation user.");
+                        this.logger.debug({ orgId: orgId, email: email, role: role, response: response }, "Created grafana organization user.");
                         return [2, response];
                     case 2:
-                        e_6 = _a.sent();
-                        this.logger.error("Failed to create grafana user", { orgId: orgId, email: email, role: role, error: this.formatError(e_6) });
+                        e_7 = _a.sent();
+                        this.logger.error("Failed to create grafana user", { orgId: orgId, email: email, role: role, error: this.formatError(e_7) });
                         return [3, 3];
                     case 3: return [2];
                 }
             });
+        }); };
+        this.deleteGrafanaUser = function (orgId, userId, email) { return __awaiter(_this, void 0, void 0, function () {
+            var response, e_8;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        _a.trys.push([0, 2, , 3]);
+                        this.logger.debug({
+                            orgId: orgId,
+                            userId: userId,
+                            email: email,
+                        }, "Delete grafana user.");
+                        return [4, request({
+                                method: "DELETE",
+                                headers: {
+                                    "Accept": "application/json",
+                                    "Content-Type": "application/json",
+                                },
+                                json: true,
+                                uri: this.grafanaUri + "/api/orgs/" + orgId + "/users/" + userId,
+                            }).catch(function (err) { return err.response; })];
+                    case 1:
+                        response = _a.sent();
+                        this.logger.debug({ orgId: orgId, userId: userId, response: response }, "Delete grafana user.");
+                        return [2, response];
+                    case 2:
+                        e_8 = _a.sent();
+                        this.logger.error("Failed to delete grafana user", { orgId: orgId, userId: userId, error: this.formatError(e_8) });
+                        return [3, 3];
+                    case 3: return [2];
+                }
+            });
+        }); };
+        this.formatError = function (err) {
+            if (!err) {
+                return "";
+            }
+            if (err && err.error) {
+                return err.error;
+            }
+            if (err && err.message) {
+                return err.message;
+            }
+            return "";
+        };
+        this.sync = function () { return __awaiter(_this, void 0, void 0, function () {
+            var e_9;
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        _a.trys.push([0, 6, , 7]);
+                        if (this.updateRunning) {
+                            this.logger.debug("Update is already running. Skipping...");
+                            return [2];
+                        }
+                        this.logger.info("Start sync process");
+                        this.updateRunning = true;
+                        return [4, Promise.all(this.rules.map(function (rule) { return __awaiter(_this, void 0, void 0, function () {
+                                var groupEmail, orgName, role, orgId, uniqueId, _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, e_10;
+                                return __generator(this, function (_l) {
+                                    switch (_l.label) {
+                                        case 0:
+                                            _l.trys.push([0, 4, , 5]);
+                                            groupEmail = rule.split(":")[0];
+                                            orgName = rule.split(":")[1];
+                                            role = rule.split(":")[2];
+                                            if (!groupEmail || !orgName || !role) {
+                                                throw new Error("Email or organization name or role missing.");
+                                            }
+                                            return [4, this.getGrafanaOrgId(orgName)];
+                                        case 1:
+                                            orgId = _l.sent();
+                                            if (!orgId) {
+                                                throw new Error("Could not get grafana organization");
+                                            }
+                                            uniqueId = orgId + ":" + role;
+                                            _b = (_a = this.grafanaMembers).set;
+                                            _c = [uniqueId];
+                                            _e = (_d = (this.grafanaMembers.get(uniqueId) || [])).concat;
+                                            return [4, this.getGrafanaOrgUsers(orgId, role)];
+                                        case 2:
+                                            _b.apply(_a, _c.concat([_e.apply(_d, [_l.sent()])]));
+                                            _g = (_f = this.googleMembers).set;
+                                            _h = [uniqueId];
+                                            _k = (_j = (this.googleMembers.get(uniqueId) || [])).concat;
+                                            return [4, this.getGroupMembers(groupEmail)];
+                                        case 3:
+                                            _g.apply(_f, _h.concat([_k.apply(_j, [_l.sent()])]));
+                                            this.success.inc();
+                                            return [3, 5];
+                                        case 4:
+                                            e_10 = _l.sent();
+                                            this.fail.inc();
+                                            this.logger.error("Failed to build grafana and google users cache", this.formatError(e_10));
+                                            return [3, 5];
+                                        case 5: return [2];
+                                    }
+                                });
+                            }); }))];
+                    case 1:
+                        _a.sent();
+                        this.logger.debug(this.googleMembers, "Google members map before create/update");
+                        this.logger.debug(this.grafanaMembers, "Grafana members map before create/update");
+                        return [4, Promise.all(Array.from(this.googleMembers.keys()).map(function (uniqueId) { return __awaiter(_this, void 0, void 0, function () {
+                                var emails, orgId, role;
+                                var _this = this;
+                                return __generator(this, function (_a) {
+                                    switch (_a.label) {
+                                        case 0:
+                                            emails = this.googleMembers.get(uniqueId);
+                                            orgId = uniqueId.split(":")[0];
+                                            role = uniqueId.split(":")[1];
+                                            return [4, Promise.all(emails.map(function (email) { return __awaiter(_this, void 0, void 0, function () {
+                                                    var userId, e_11;
+                                                    return __generator(this, function (_a) {
+                                                        switch (_a.label) {
+                                                            case 0:
+                                                                _a.trys.push([0, 6, 7, 8]);
+                                                                this.logger.info({ email: email, orgId: orgId, role: role }, "Sync gsuite rule");
+                                                                return [4, this.getGrafanaUserId(email)];
+                                                            case 1:
+                                                                userId = _a.sent();
+                                                                if (!userId) return [3, 5];
+                                                                if (!!this.grafanaMembers.get(uniqueId).find(function (e) { return e === email; })) return [3, 3];
+                                                                return [4, this.createGrafanaUser(orgId, email, role)];
+                                                            case 2:
+                                                                _a.sent();
+                                                                return [3, 5];
+                                                            case 3: return [4, this.updateGrafanaUser(orgId, userId, role, email)];
+                                                            case 4:
+                                                                _a.sent();
+                                                                _a.label = 5;
+                                                            case 5: return [3, 8];
+                                                            case 6:
+                                                                e_11 = _a.sent();
+                                                                this.logger.error("Failed to create or update all google users in grafana", this.formatError(e_11));
+                                                                return [3, 8];
+                                                            case 7:
+                                                                this.logger.debug("Remove user " + email + " from sync map.");
+                                                                this.grafanaMembers.set(uniqueId, this.grafanaMembers.get(uniqueId).filter(function (e) { return e !== email; }));
+                                                                return [7];
+                                                            case 8: return [2];
+                                                        }
+                                                    });
+                                                }); }))];
+                                        case 1:
+                                            _a.sent();
+                                            return [2];
+                                    }
+                                });
+                            }); }))];
+                    case 2:
+                        _a.sent();
+                        this.logger.debug(this.googleMembers, "Google members map before delete");
+                        this.logger.debug(this.grafanaMembers, "Grafana members map before delete");
+                        if (!(this.mode === "sync")) return [3, 4];
+                        return [4, Promise.all(Array.from(this.grafanaMembers.keys()).map(function (uniqueId) { return __awaiter(_this, void 0, void 0, function () {
+                                var emails, orgId;
+                                var _this = this;
+                                return __generator(this, function (_a) {
+                                    switch (_a.label) {
+                                        case 0:
+                                            emails = this.grafanaMembers.get(uniqueId);
+                                            orgId = uniqueId.split(":")[0];
+                                            return [4, Promise.all(emails.map(function (email) { return __awaiter(_this, void 0, void 0, function () {
+                                                    var userId, userRole;
+                                                    return __generator(this, function (_a) {
+                                                        switch (_a.label) {
+                                                            case 0: return [4, this.getGrafanaUserId(email)];
+                                                            case 1:
+                                                                userId = _a.sent();
+                                                                if (!userId) return [3, 4];
+                                                                return [4, this.getGrafanaUserRole(userId, orgId, email)];
+                                                            case 2:
+                                                                userRole = _a.sent();
+                                                                if (!(this.excludeRole !== userRole && !this.googleMembers.get(uniqueId).find(function (e) { return e === email; }))) return [3, 4];
+                                                                return [4, this.deleteGrafanaUser(orgId, userId, email)];
+                                                            case 3:
+                                                                _a.sent();
+                                                                _a.label = 4;
+                                                            case 4: return [2];
+                                                        }
+                                                    });
+                                                }); }))];
+                                        case 1:
+                                            _a.sent();
+                                            return [2];
+                                    }
+                                });
+                            }); }))];
+                    case 3:
+                        _a.sent();
+                        _a.label = 4;
+                    case 4: return [4, Promise.all(this.staticRules.map(function (rule) { return __awaiter(_this, void 0, void 0, function () {
+                            var email, orgName, role, orgId, uniqueId, userId, e_12, e_13;
+                            return __generator(this, function (_a) {
+                                switch (_a.label) {
+                                    case 0:
+                                        email = rule.split(":")[0];
+                                        orgName = rule.split(":")[1];
+                                        role = rule.split(":")[2];
+                                        if (!email || !orgName || !role) {
+                                            throw new Error("Email or organization name or role missing.");
+                                        }
+                                        return [4, this.getGrafanaOrgId(orgName)];
+                                    case 1:
+                                        orgId = _a.sent();
+                                        if (!orgId) {
+                                            throw new Error("Could not get grafana organization");
+                                        }
+                                        this.logger.info({ email: email, orgId: orgId, role: role }, "Sync static rule");
+                                        uniqueId = orgId + ":" + role;
+                                        _a.label = 2;
+                                    case 2:
+                                        _a.trys.push([2, 9, 10, 11]);
+                                        return [4, this.getGrafanaUserId(email)];
+                                    case 3:
+                                        userId = _a.sent();
+                                        if (!userId) return [3, 8];
+                                        _a.label = 4;
+                                    case 4:
+                                        _a.trys.push([4, 6, , 8]);
+                                        return [4, this.createGrafanaUser(orgId, email, role)];
+                                    case 5:
+                                        _a.sent();
+                                        return [3, 8];
+                                    case 6:
+                                        e_12 = _a.sent();
+                                        return [4, this.updateGrafanaUser(orgId, userId, role, email)];
+                                    case 7:
+                                        _a.sent();
+                                        return [3, 8];
+                                    case 8: return [3, 11];
+                                    case 9:
+                                        e_13 = _a.sent();
+                                        this.logger.error("Failed to create or update static users", this.formatError(e_13));
+                                        return [3, 11];
+                                    case 10:
+                                        if (this.grafanaMembers.get(uniqueId)) {
+                                            this.logger.debug("Remove user " + email + " from sync map.");
+                                            this.grafanaMembers.set(uniqueId, this.grafanaMembers.get(uniqueId).filter(function (e) { return e !== email; }));
+                                        }
+                                        return [7];
+                                    case 11: return [2];
+                                }
+                            });
+                        }); }))];
+                    case 5:
+                        _a.sent();
+                        this.googleMembers.clear();
+                        this.grafanaMembers.clear();
+                        this.logger.info("End sync process");
+                        this.updateRunning = false;
+                        return [3, 7];
+                    case 6:
+                        e_9 = _a.sent();
+                        this.fail.inc();
+                        this.logger.error(this.formatError(e_9));
+                        this.updateRunning = false;
+                        return [3, 7];
+                    case 7: return [2];
+                }
+            });
+        }); };
+        this.updateRunning = false;
+        this.logLevel = process.env.LEVEL || commander.level || "info";
+        this.logger = pino({
+            prettyPrint: process.env.NODE_ENV !== "production",
+            level: this.logLevel,
         });
-    };
+        this.grafanaProtocol = process.env.GRAFANA_PROTOCOL || commander.grafanaProtocol || "http";
+        this.grafanaHost = process.env.GRAFANA_HOST || commander.grafanaHost || "localhost:3000";
+        this.grafanaUsername = process.env.GRAFANA_USERNAME || commander.grafanaUsername || "admin";
+        this.grafanaPassword = process.env.GRAFANA_PASSWORD || commander.grafanaPassword || "";
+        this.grafanaUri = this.grafanaProtocol + "://" + this.grafanaUsername + ":" + this.grafanaPassword + "@" + this.grafanaHost;
+        this.credentialsPath = process.env.GOOGLE_CREDENTIALS || commander.googleCredentials || ".credentials.json";
+        this.googleAdminEmail = process.env.GOOGLE_ADMIN_EMAIL || commander.googleAdminEmail || "";
+        this.rules = process.env.RULES || commander.rules || [];
+        this.staticRules = process.env.STATIC_RULES || commander.staticRules || [];
+        this.mode = process.env.MODE || commander.mode || "sync";
+        this.excludeRole = process.env.EXCLUDE_ROLE || commander.excludeRole || "";
+        this.metricsInterval = prom_client_1.collectDefaultMetrics();
+        this.success = new prom_client_1.Counter({
+            help: "Successful grafana gsuite sync counter",
+            name: "grafana_gsuite_sync_success",
+        });
+        this.fail = new prom_client_1.Counter({
+            help: "Unsuccessful grafana gsuite sync counter",
+            name: "grafana_gsuite_sync_fail",
+        });
+        this.grafanaMembers = new Map();
+        this.googleMembers = new Map();
+    }
     GrafanaSync.prototype.updateGrafanaUser = function (orgId, userId, role, email) {
         return __awaiter(this, void 0, void 0, function () {
-            var oldRole, response, e_7;
+            var oldRole, response, e_14;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -397,284 +673,10 @@ var GrafanaSync = (function () {
                         this.logger.debug({ orgId: orgId, userId: userId, role: role, response: response }, "Updated grafana user.");
                         return [2, response];
                     case 3:
-                        e_7 = _a.sent();
-                        this.logger.error("Failed to update grafana user", { orgId: orgId, userId: userId, role: role, error: this.formatError(e_7) });
+                        e_14 = _a.sent();
+                        this.logger.error("Failed to update grafana user", { orgId: orgId, userId: userId, role: role, error: this.formatError(e_14) });
                         return [3, 4];
                     case 4: return [2];
-                }
-            });
-        });
-    };
-    GrafanaSync.prototype.deleteGrafanaUser = function (orgId, userId, email) {
-        return __awaiter(this, void 0, void 0, function () {
-            var response, e_8;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        _a.trys.push([0, 2, , 3]);
-                        this.logger.debug({
-                            orgId: orgId,
-                            userId: userId,
-                            email: email,
-                        }, "Delete grafana user.");
-                        return [4, request({
-                                method: "DELETE",
-                                headers: {
-                                    "Accept": "application/json",
-                                    "Content-Type": "application/json",
-                                },
-                                json: true,
-                                uri: this.grafanaUri + "/api/orgs/" + orgId + "/users/" + userId,
-                            }).catch(function (err) { return err.response; })];
-                    case 1:
-                        response = _a.sent();
-                        this.logger.debug({ orgId: orgId, userId: userId, response: response }, "Delete grafana user.");
-                        return [2, response];
-                    case 2:
-                        e_8 = _a.sent();
-                        this.logger.error("Failed to delete grafana user", { orgId: orgId, userId: userId, error: this.formatError(e_8) });
-                        return [3, 3];
-                    case 3: return [2];
-                }
-            });
-        });
-    };
-    GrafanaSync.prototype.formatError = function (err) {
-        if (!err) {
-            return "";
-        }
-        if (err && err.error) {
-            return err.error;
-        }
-        if (err && err.message) {
-            return err.message;
-        }
-        return "";
-    };
-    GrafanaSync.prototype.sync = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var self, e_9;
-            var _this = this;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        self = this;
-                        _a.label = 1;
-                    case 1:
-                        _a.trys.push([1, 7, , 8]);
-                        if (self.updateRunning) {
-                            self.logger.debug("Update is already running. Skipping...");
-                            return [2];
-                        }
-                        self.logger.info("Start sync process");
-                        self.updateRunning = true;
-                        return [4, Promise.all(self.rules.map(function (rule) { return __awaiter(_this, void 0, void 0, function () {
-                                var groupEmail, orgName, role, orgId, uniqueId, _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, e_10;
-                                return __generator(this, function (_l) {
-                                    switch (_l.label) {
-                                        case 0:
-                                            _l.trys.push([0, 5, , 6]);
-                                            groupEmail = rule.split(":")[0];
-                                            orgName = rule.split(":")[1];
-                                            role = rule.split(":")[2];
-                                            if (!groupEmail || !orgName || !role) {
-                                                throw new Error("Email or organization name or role missing.");
-                                            }
-                                            return [4, self.getGrafanaOrgId(orgName)];
-                                        case 1:
-                                            orgId = _l.sent();
-                                            if (!orgId) {
-                                                throw new Error("Could not get grafana organisation");
-                                            }
-                                            uniqueId = orgId + ":" + role;
-                                            _b = (_a = self.grafanaMembers).set;
-                                            _c = [uniqueId];
-                                            _e = (_d = (self.grafanaMembers.get(uniqueId) || [])).concat;
-                                            return [4, self.getGrafanaOrgUsers(orgId, role)];
-                                        case 2:
-                                            _b.apply(_a, _c.concat([_e.apply(_d, [_l.sent()])]));
-                                            return [4, self.getGoogleApiClient()];
-                                        case 3:
-                                            _l.sent();
-                                            _g = (_f = self.googleMembers).set;
-                                            _h = [uniqueId];
-                                            _k = (_j = (self.googleMembers.get(uniqueId) || [])).concat;
-                                            return [4, self.getGroupMembers(groupEmail)];
-                                        case 4:
-                                            _g.apply(_f, _h.concat([_k.apply(_j, [_l.sent()])]));
-                                            self.success.inc();
-                                            return [3, 6];
-                                        case 5:
-                                            e_10 = _l.sent();
-                                            self.fail.inc();
-                                            self.logger.error("Failed to build grafana and google users cache", self.formatError(e_10));
-                                            return [3, 6];
-                                        case 6: return [2];
-                                    }
-                                });
-                            }); }))];
-                    case 2:
-                        _a.sent();
-                        self.logger.debug(self.googleMembers, "Google members map before create/update");
-                        self.logger.debug(self.grafanaMembers, "Grafana members map before create/update");
-                        return [4, Promise.all(Array.from(self.googleMembers.keys()).map(function (uniqueId) { return __awaiter(_this, void 0, void 0, function () {
-                                var emails, orgId, role;
-                                var _this = this;
-                                return __generator(this, function (_a) {
-                                    switch (_a.label) {
-                                        case 0:
-                                            emails = self.googleMembers.get(uniqueId);
-                                            orgId = uniqueId.split(":")[0];
-                                            role = uniqueId.split(":")[1];
-                                            return [4, Promise.all(emails.map(function (email) { return __awaiter(_this, void 0, void 0, function () {
-                                                    var userId, e_11;
-                                                    return __generator(this, function (_a) {
-                                                        switch (_a.label) {
-                                                            case 0:
-                                                                _a.trys.push([0, 6, 7, 8]);
-                                                                self.logger.info({ email: email, orgId: orgId, role: role }, "Sync gsuite rule");
-                                                                return [4, self.getGrafanaUserId(email)];
-                                                            case 1:
-                                                                userId = _a.sent();
-                                                                if (!userId) return [3, 5];
-                                                                if (!!self.grafanaMembers.get(uniqueId).find(function (e) { return e === email; })) return [3, 3];
-                                                                return [4, self.createGrafanaUser(orgId, email, role)];
-                                                            case 2:
-                                                                _a.sent();
-                                                                return [3, 5];
-                                                            case 3: return [4, self.updateGrafanaUser(orgId, userId, role, email)];
-                                                            case 4:
-                                                                _a.sent();
-                                                                _a.label = 5;
-                                                            case 5: return [3, 8];
-                                                            case 6:
-                                                                e_11 = _a.sent();
-                                                                self.logger.error("Failed to create or update all google users in grafana", self.formatError(e_11));
-                                                                return [3, 8];
-                                                            case 7:
-                                                                self.logger.debug("Remove user " + email + " from sync map.");
-                                                                self.grafanaMembers.set(uniqueId, self.grafanaMembers.get(uniqueId).filter(function (e) { return e !== email; }));
-                                                                return [7];
-                                                            case 8: return [2];
-                                                        }
-                                                    });
-                                                }); }))];
-                                        case 1:
-                                            _a.sent();
-                                            return [2];
-                                    }
-                                });
-                            }); }))];
-                    case 3:
-                        _a.sent();
-                        self.logger.debug(self.googleMembers, "Google members map before delete");
-                        self.logger.debug(self.grafanaMembers, "Grafana members map before delete");
-                        if (!(self.mode === "sync")) return [3, 5];
-                        return [4, Promise.all(Array.from(self.grafanaMembers.keys()).map(function (uniqueId) { return __awaiter(_this, void 0, void 0, function () {
-                                var emails, orgId;
-                                var _this = this;
-                                return __generator(this, function (_a) {
-                                    switch (_a.label) {
-                                        case 0:
-                                            emails = self.grafanaMembers.get(uniqueId);
-                                            orgId = uniqueId.split(":")[0];
-                                            return [4, Promise.all(emails.map(function (email) { return __awaiter(_this, void 0, void 0, function () {
-                                                    var userId, userRole;
-                                                    return __generator(this, function (_a) {
-                                                        switch (_a.label) {
-                                                            case 0: return [4, self.getGrafanaUserId(email)];
-                                                            case 1:
-                                                                userId = _a.sent();
-                                                                if (!userId) return [3, 4];
-                                                                return [4, self.getGrafanaUserRole(userId, orgId, email)];
-                                                            case 2:
-                                                                userRole = _a.sent();
-                                                                if (!(self.excludeRole !== userRole && !self.googleMembers.get(uniqueId).find(function (e) { return e === email; }))) return [3, 4];
-                                                                return [4, self.deleteGrafanaUser(orgId, userId, email)];
-                                                            case 3:
-                                                                _a.sent();
-                                                                _a.label = 4;
-                                                            case 4: return [2];
-                                                        }
-                                                    });
-                                                }); }))];
-                                        case 1:
-                                            _a.sent();
-                                            return [2];
-                                    }
-                                });
-                            }); }))];
-                    case 4:
-                        _a.sent();
-                        _a.label = 5;
-                    case 5: return [4, Promise.all(self.staticRules.map(function (rule) { return __awaiter(_this, void 0, void 0, function () {
-                            var email, orgName, role, orgId, uniqueId, userId, e_12, e_13;
-                            return __generator(this, function (_a) {
-                                switch (_a.label) {
-                                    case 0:
-                                        email = rule.split(":")[0];
-                                        orgName = rule.split(":")[1];
-                                        role = rule.split(":")[2];
-                                        if (!email || !orgName || !role) {
-                                            throw new Error("Email or organization name or role missing.");
-                                        }
-                                        return [4, self.getGrafanaOrgId(orgName)];
-                                    case 1:
-                                        orgId = _a.sent();
-                                        if (!orgId) {
-                                            throw new Error("Could not get grafana organisation");
-                                        }
-                                        self.logger.info({ email: email, orgId: orgId, role: role }, "Sync static rule");
-                                        uniqueId = orgId + ":" + role;
-                                        _a.label = 2;
-                                    case 2:
-                                        _a.trys.push([2, 9, 10, 11]);
-                                        return [4, self.getGrafanaUserId(email)];
-                                    case 3:
-                                        userId = _a.sent();
-                                        if (!userId) return [3, 8];
-                                        _a.label = 4;
-                                    case 4:
-                                        _a.trys.push([4, 6, , 8]);
-                                        return [4, self.createGrafanaUser(orgId, email, role)];
-                                    case 5:
-                                        _a.sent();
-                                        return [3, 8];
-                                    case 6:
-                                        e_12 = _a.sent();
-                                        return [4, self.updateGrafanaUser(orgId, userId, role, email)];
-                                    case 7:
-                                        _a.sent();
-                                        return [3, 8];
-                                    case 8: return [3, 11];
-                                    case 9:
-                                        e_13 = _a.sent();
-                                        self.logger.error("Failed to create or update static users", self.formatError(e_13));
-                                        return [3, 11];
-                                    case 10:
-                                        if (self.grafanaMembers.get(uniqueId)) {
-                                            self.logger.debug("Remove user " + email + " from sync map.");
-                                            self.grafanaMembers.set(uniqueId, self.grafanaMembers.get(uniqueId).filter(function (e) { return e !== email; }));
-                                        }
-                                        return [7];
-                                    case 11: return [2];
-                                }
-                            });
-                        }); }))];
-                    case 6:
-                        _a.sent();
-                        self.googleMembers.clear();
-                        self.grafanaMembers.clear();
-                        self.logger.info("End sync process");
-                        self.updateRunning = false;
-                        return [3, 8];
-                    case 7:
-                        e_9 = _a.sent();
-                        self.fail.inc();
-                        self.logger.error(self.formatError(e_9));
-                        self.updateRunning = false;
-                        return [3, 8];
-                    case 8: return [2];
                 }
             });
         });
@@ -699,7 +701,7 @@ app.get("/metrics", function (req, res) { return __awaiter(void 0, void 0, void 
 }); });
 var server = app.listen(port, function () {
     console.info("Server listening on port " + port + "!");
-    grafanaSync.sync();
+    return grafanaSync.sync();
 });
 var interval = process.env.INTERVAL || commander.interval || 24 * 60 * 60 * 1000;
 var updateInterval = setInterval(grafanaSync.sync, parseInt(interval, 10));
