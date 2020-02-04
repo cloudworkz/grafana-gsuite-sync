@@ -1,6 +1,8 @@
-# grafana-gsuite-sync
+# grafana-gsuite-sync (deprecated)
 [![license](https://img.shields.io/github/license/google-cloud-tools/grafana-gsuite-sync.svg?maxAge=604800)](https://github.com/google-cloud-tools/grafana-gsuite-sync)
 [![Docker Repository on Quay](https://quay.io/repository/google-cloud-tools/grafana-gsuite-sync/status "Docker Repository on Quay")](https://quay.io/repository/google-cloud-tools/grafana-gsuite-sync)
+
+## >> This tool has been deprecated, use [grafana-permission-sync](https://github.com/cloudworkz/grafana-permission-sync) instead
 
 ### What It Does
 
